@@ -71,6 +71,9 @@
             background-color: #4CAF50;
             color: white;
         }
+        .tabela-container {
+            display: none;
+        }
     </style>
 </head>
 <body>
@@ -90,7 +93,7 @@
         <button onclick="calcularSimulacao()">Calcular</button>
     </div>
     
-    <div class="container">
+    <div class="container tabela-container">
         <h3>Tabela de Simulação</h3>
         <table>
             <thead>
@@ -129,11 +132,28 @@
             let prazo = parseInt($('#prazo').val());
             let carencia = parseInt($('#carencia').val());
             let tipoAmortizacao = $('#tipoAmortizacao').val();
+
+            let taxaADM = 25;  // Taxa fixa
+            let seguroDFI = 7.40;  // Valor fixo do Seguro DFI
+            let seguroMIPPercentual = 0.0005;  // Seguro MIP sobre saldo devedor
             
             let tabela = $('#tabelaSimulacao');
             tabela.html("");
 
-            for (let mes = 0; mes < carencia; mes++) {
+            // Linha 0: Exibir apenas o valor inicial do crédito
+            tabela.append(`<tr>
+                <td>0</td>
+                <td>R$ ${valorCredito.toFixed(2)}</td>
+                <td>R$ 0,00</td>
+                <td>R$ 0,00</td>
+                <td>R$ 0,00</td>
+                <td>R$ 0,00</td>
+                <td>R$ 0,00</td>
+                <td>R$ 0,00</td>
+            </tr>`);
+
+            // Carência - juros são capitalizados
+            for (let mes = 1; mes <= carencia; mes++) {
                 let juros = saldoDevedor * taxaJuros;
                 saldoDevedor += juros;
 
@@ -144,50 +164,35 @@
                     <td>R$ ${juros.toFixed(2)}</td>
                     <td>R$ 0,00</td>
                     <td>R$ 0,00</td>
-                    <td>R$ 0,00</td>
+                    <td>R$ ${taxaADM.toFixed(2)}</td>
                     <td>R$ 0,00</td>
                 </tr>`);
             }
 
-            if (tipoAmortizacao === "SAC") {
-                let amortizacao = saldoDevedor / (prazo - carencia);
-                for (let mes = carencia; mes <= prazo; mes++) {
-                    let juros = saldoDevedor * taxaJuros;
-                    let parcela = amortizacao + juros + 25 + (saldoDevedor * 0.0005) + (saldoDevedor * 0.0002);
-                    saldoDevedor -= amortizacao;
+            let amortizacao = saldoDevedor / (prazo - carencia);
+            let fator = (taxaJuros * Math.pow(1 + taxaJuros, prazo)) / (Math.pow(1 + taxaJuros, prazo) - 1);
+            let parcelaFixa = saldoDevedor * fator;
 
-                    tabela.append(`<tr>
-                        <td>${mes}</td>
-                        <td>R$ ${saldoDevedor.toFixed(2)}</td>
-                        <td>R$ ${amortizacao.toFixed(2)}</td>
-                        <td>R$ ${juros.toFixed(2)}</td>
-                        <td>R$ ${(saldoDevedor * 0.0005).toFixed(2)}</td>
-                        <td>R$ ${(saldoDevedor * 0.0002).toFixed(2)}</td>
-                        <td>R$ 25,00</td>
-                        <td>R$ ${parcela.toFixed(2)} +IPCA</td>
-                    </tr>`);
-                }
-            } else if (tipoAmortizacao === "PRICE") {
-                let fator = (taxaJuros * Math.pow(1 + taxaJuros, prazo)) / (Math.pow(1 + taxaJuros, prazo) - 1);
-                let parcelaFixa = saldoDevedor * fator;
+            for (let mes = carencia + 1; mes <= prazo; mes++) {
+                let juros = saldoDevedor * taxaJuros;
+                let amortizacaoAtual = tipoAmortizacao === "SAC" ? amortizacao : parcelaFixa - juros;
+                let seguroMIP = saldoDevedor * seguroMIPPercentual;
+                let parcela = tipoAmortizacao === "SAC" ? amortizacao + juros + taxaADM + seguroMIP + seguroDFI : parcelaFixa;
+                saldoDevedor -= amortizacaoAtual;
 
-                for (let mes = carencia; mes <= prazo; mes++) {
-                    let juros = saldoDevedor * taxaJuros;
-                    let amortizacao = parcelaFixa - juros;
-                    saldoDevedor -= amortizacao;
-
-                    tabela.append(`<tr>
-                        <td>${mes}</td>
-                        <td>R$ ${saldoDevedor.toFixed(2)}</td>
-                        <td>R$ ${amortizacao.toFixed(2)}</td>
-                        <td>R$ ${juros.toFixed(2)}</td>
-                        <td>R$ ${(saldoDevedor * 0.0005).toFixed(2)}</td>
-                        <td>R$ ${(saldoDevedor * 0.0002).toFixed(2)}</td>
-                        <td>R$ 25,00</td>
-                        <td>R$ ${parcelaFixa.toFixed(2)} +IPCA</td>
-                    </tr>`);
-                }
+                tabela.append(`<tr>
+                    <td>${mes}</td>
+                    <td>R$ ${saldoDevedor.toFixed(2)}</td>
+                    <td>R$ ${amortizacaoAtual.toFixed(2)}</td>
+                    <td>R$ ${juros.toFixed(2)}</td>
+                    <td>R$ ${seguroMIP.toFixed(2)}</td>
+                    <td>R$ ${seguroDFI.toFixed(2)}</td>
+                    <td>R$ ${taxaADM.toFixed(2)}</td>
+                    <td>R$ ${parcela.toFixed(2)} +IPCA</td>
+                </tr>`);
             }
+
+            $(".tabela-container").fadeIn();
         }
     </script>
 </body>
