@@ -1,0 +1,71 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Simulador de Crédito</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 20px; }
+        input { margin: 5px; padding: 5px; }
+        table { width: 100%; border-collapse: collapse; margin-top: 20px; }
+        th, td { border: 1px solid #ccc; padding: 8px; text-align: center; }
+        th { background-color: #f4f4f4; }
+    </style>
+</head>
+<body>
+    <h2>Simulador de Crédito com Imóvel em Garantia</h2>
+    <label>Valor do Crédito: <input type="number" id="valorCredito" value="100000"></label>
+    <label>Taxa de Juros (% a.m.): <input type="number" id="taxaJuros" value="1.69" step="0.01"></label>
+    <label>Prazo (meses): <input type="number" id="prazo" value="180"></label>
+    <button onclick="calcularSimulacao()">Calcular</button>
+    
+    <h3>Tabela de Simulação</h3>
+    <table>
+        <thead>
+            <tr>
+                <th>Mês</th>
+                <th>Amortização</th>
+                <th>Juros</th>
+                <th>Seguro MIP</th>
+                <th>Seguro DFI</th>
+                <th>Valor Parcela</th>
+                <th>Saldo Devedor</th>
+            </tr>
+        </thead>
+        <tbody id="tabelaSimulacao"></tbody>
+    </table>
+    
+    <script>
+        function calcularSimulacao() {
+            let valorCredito = parseFloat(document.getElementById('valorCredito').value);
+            let taxaJuros = parseFloat(document.getElementById('taxaJuros').value) / 100;
+            let prazo = parseInt(document.getElementById('prazo').value);
+            
+            let amortizacao = valorCredito / prazo;
+            let saldoDevedor = valorCredito;
+            let tabela = document.getElementById("tabelaSimulacao");
+            tabela.innerHTML = "";
+            
+            for (let mes = 1; mes <= prazo; mes++) {
+                let juros = saldoDevedor * taxaJuros;
+                let seguroMIP = saldoDevedor * 0.0005; // Exemplo: 0.05% do saldo
+                let seguroDFI = saldoDevedor * 0.0002; // Exemplo: 0.02% do saldo
+                let parcela = amortizacao + juros + seguroMIP + seguroDFI;
+                
+                saldoDevedor -= amortizacao;
+                
+                let row = `<tr>
+                    <td>${mes}</td>
+                    <td>R$ ${amortizacao.toFixed(2)}</td>
+                    <td>R$ ${juros.toFixed(2)}</td>
+                    <td>R$ ${seguroMIP.toFixed(2)}</td>
+                    <td>R$ ${seguroDFI.toFixed(2)}</td>
+                    <td>R$ ${parcela.toFixed(2)}</td>
+                    <td>R$ ${saldoDevedor.toFixed(2)}</td>
+                </tr>`;
+                tabela.innerHTML += row;
+            }
+        }
+    </script>
+</body>
+</html>

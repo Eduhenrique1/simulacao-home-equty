@@ -1,0 +1,194 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Simulador de Crédito</title>
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery.mask/1.14.16/jquery.mask.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/toastr.js/latest/toastr.min.js"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/toastr.js/latest/toastr.min.css">
+    <style>
+        body {
+            font-family: 'Arial', sans-serif;
+            background-color: #f8f9fa;
+            margin: 0;
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+        .container {
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0px 4px 10px rgba(0, 0, 0, 0.1);
+            max-width: 900px;
+            width: 100%;
+        }
+        h2, h3 {
+            text-align: center;
+            color: #333;
+        }
+        label {
+            display: block;
+            margin-top: 10px;
+            font-weight: bold;
+        }
+        input, select {
+            width: 100%;
+            padding: 8px;
+            margin-top: 5px;
+            border: 1px solid #ccc;
+            border-radius: 5px;
+        }
+        button {
+            width: 100%;
+            padding: 10px;
+            margin-top: 20px;
+            background-color: #007bff;
+            border: none;
+            color: white;
+            font-size: 16px;
+            border-radius: 5px;
+            cursor: pointer;
+            transition: background 0.3s;
+        }
+        button:hover {
+            background-color: #0056b3;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 20px;
+        }
+        th, td {
+            border: 1px solid #ddd;
+            padding: 8px;
+            text-align: center;
+        }
+        th {
+            background-color: #4CAF50;
+            color: white;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h2>Simulador de Crédito Home Equity</h2>
+        <label>Valor do Imóvel: <input type="text" id="valorImovel" value="200000"></label>
+        <label>Valor do Crédito (50% do imóvel): <input type="text" id="valorCredito" readonly></label>
+        <label>Taxa de Juros (% a.m.): <input type="text" id="taxaJuros" value="1.19"></label>
+        <label>Prazo (meses): <input type="text" id="prazo" value="180"></label>
+        <label>Carência (meses): <input type="text" id="carencia" value="2"></label>
+        <label>Tipo de Amortização: 
+            <select id="tipoAmortizacao">
+                <option value="SAC">SAC</option>
+                <option value="PRICE">PRICE</option>
+            </select>
+        </label>
+        <button onclick="calcularSimulacao()">Calcular</button>
+    </div>
+    
+    <div class="container">
+        <h3>Tabela de Simulação</h3>
+        <table>
+            <thead>
+                <tr>
+                    <th>#</th>
+                    <th>Saldo</th>
+                    <th>Amortização</th>
+                    <th>Juros</th>
+                    <th>Seguro MIP</th>
+                    <th>Seguro DFI</th>
+                    <th>Taxa ADM</th>
+                    <th>Valor Parcela</th>
+                </tr>
+            </thead>
+            <tbody id="tabelaSimulacao"></tbody>
+        </table>
+    </div>
+    
+    <script>
+        $(document).ready(function() {
+            $('#valorImovel').mask('000.000.000,00', {reverse: true});
+            $('#taxaJuros').mask('0,00', {reverse: true});
+            $('#prazo, #carencia').mask('000');
+
+            $('#valorImovel').on('input', function() {
+                let valorImovel = parseFloat($(this).val().replace(/\./g, '').replace(',', '.')) || 0;
+                let valorCredito = valorImovel * 0.5;
+                $('#valorCredito').val(valorCredito.toLocaleString('pt-BR', {minimumFractionDigits: 2}));
+            }).trigger('input');
+        });
+
+        function calcularSimulacao() {
+            let valorCredito = parseFloat($('#valorCredito').val().replace(/\./g, '').replace(',', '.'));
+            let saldoDevedor = valorCredito;
+            let taxaJuros = parseFloat($('#taxaJuros').val().replace(',', '.')) / 100;
+            let prazo = parseInt($('#prazo').val());
+            let carencia = parseInt($('#carencia').val());
+            let tipoAmortizacao = $('#tipoAmortizacao').val();
+            
+            let tabela = $('#tabelaSimulacao');
+            tabela.html("");
+
+            for (let mes = 0; mes < carencia; mes++) {
+                let juros = saldoDevedor * taxaJuros;
+                saldoDevedor += juros;
+
+                tabela.append(`<tr>
+                    <td>${mes}</td>
+                    <td>R$ ${saldoDevedor.toFixed(2)}</td>
+                    <td>R$ 0,00</td>
+                    <td>R$ ${juros.toFixed(2)}</td>
+                    <td>R$ 0,00</td>
+                    <td>R$ 0,00</td>
+                    <td>R$ 0,00</td>
+                    <td>R$ 0,00</td>
+                </tr>`);
+            }
+
+            if (tipoAmortizacao === "SAC") {
+                let amortizacao = saldoDevedor / (prazo - carencia);
+                for (let mes = carencia; mes <= prazo; mes++) {
+                    let juros = saldoDevedor * taxaJuros;
+                    let parcela = amortizacao + juros + 25 + (saldoDevedor * 0.0005) + (saldoDevedor * 0.0002);
+                    saldoDevedor -= amortizacao;
+
+                    tabela.append(`<tr>
+                        <td>${mes}</td>
+                        <td>R$ ${saldoDevedor.toFixed(2)}</td>
+                        <td>R$ ${amortizacao.toFixed(2)}</td>
+                        <td>R$ ${juros.toFixed(2)}</td>
+                        <td>R$ ${(saldoDevedor * 0.0005).toFixed(2)}</td>
+                        <td>R$ ${(saldoDevedor * 0.0002).toFixed(2)}</td>
+                        <td>R$ 25,00</td>
+                        <td>R$ ${parcela.toFixed(2)} +IPCA</td>
+                    </tr>`);
+                }
+            } else if (tipoAmortizacao === "PRICE") {
+                let fator = (taxaJuros * Math.pow(1 + taxaJuros, prazo)) / (Math.pow(1 + taxaJuros, prazo) - 1);
+                let parcelaFixa = saldoDevedor * fator;
+
+                for (let mes = carencia; mes <= prazo; mes++) {
+                    let juros = saldoDevedor * taxaJuros;
+                    let amortizacao = parcelaFixa - juros;
+                    saldoDevedor -= amortizacao;
+
+                    tabela.append(`<tr>
+                        <td>${mes}</td>
+                        <td>R$ ${saldoDevedor.toFixed(2)}</td>
+                        <td>R$ ${amortizacao.toFixed(2)}</td>
+                        <td>R$ ${juros.toFixed(2)}</td>
+                        <td>R$ ${(saldoDevedor * 0.0005).toFixed(2)}</td>
+                        <td>R$ ${(saldoDevedor * 0.0002).toFixed(2)}</td>
+                        <td>R$ 25,00</td>
+                        <td>R$ ${parcelaFixa.toFixed(2)} +IPCA</td>
+                    </tr>`);
+                }
+            }
+        }
+    </script>
+</body>
+</html>
