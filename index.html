@@ -189,72 +189,87 @@
         });
 
         function calcularSimulacao() {
-            let tipoCalculo = $("input[name='tipoCalculo']:checked").val();
-            let valorImovel = parseFloat($('#valorImovel').val().replace(/\./g, '').replace(',', '.')) || 0;
-            let valorCredito = valorImovel * 0.5;
-            let iof = valorCredito * 0.035;  // IOF 3,5%
-            let custoEmissao = 5000;  // Valor fixo de custo de emissão
-            let saldoDevedor = tipoCalculo === "liquido" ? valorCredito : valorCredito + iof + custoEmissao;  
-            let taxaJuros = parseFloat($('#taxaJuros').val().replace(',', '.')) / 100;
-            let prazo = parseInt($('#prazo').val());
-            let carencia = parseInt($('#carencia').val());
-            let tipoAmortizacao = $('#tipoAmortizacao').val();
+    let tipoCalculo = $("input[name='tipoCalculo']:checked").val();
+    let valorImovel = parseFloat($('#valorImovel').val().replace(/\./g, '').replace(',', '.')) || 0;
+    let valorCredito = valorImovel * 0.5;
+    let iof = valorCredito * 0.035;  // IOF 3,72%
+    let valorBrutoInicial = valorCredito + iof;  // Crédito + IOF
+    let custoEmissao = valorBrutoInicial * 0.05;  // Custo de emissão de 5,264% sobre o valor bruto
 
-            let taxaADM = 25;
-            let seguroDFI = 7.40;
-            let seguroMIPPercentual = 0.0005;
-            let tabela = $('#tabelaSimulacao');
-            tabela.html("");
+    let saldoDevedor;
+    if (tipoCalculo === "liquido") {
+        saldoDevedor = valorBrutoInicial + custoEmissao;  // No líquido, os custos são incorporados
+    } else {
+        saldoDevedor = valorCredito;  // No bruto, o valor inicial é apenas o crédito
+    }
 
-            tabela.append(`<tr>
-                <td>0</td>
-                <td>R$ ${saldoDevedor.toFixed(2)}</td>
-                <td>R$ 0,00</td>
-                <td>R$ 0,00</td>
-                <td>R$ 0,00</td>
-                <td>R$ 0,00</td>
-                <td>R$ 0,00</td>
-                <td>R$ 0,00</td>
-            </tr>`);
+    console.log("Valor do IOF:", iof.toFixed(2));
+    console.log("Custo de Emissão:", custoEmissao.toFixed(2));
+    console.log("Saldo Devedor Inicial:", saldoDevedor.toFixed(2));
 
-            for (let mes = 1; mes <= carencia; mes++) {
-                let juros = saldoDevedor * taxaJuros;
-                saldoDevedor += juros;
+    let taxaJuros = parseFloat($('#taxaJuros').val().replace(',', '.')) / 100;
+    let prazo = parseInt($('#prazo').val());
+    let carencia = parseInt($('#carencia').val());
+    let tipoAmortizacao = $('#tipoAmortizacao').val();
 
-                tabela.append(`<tr>
-                    <td>${mes}</td>
-                    <td>R$ ${saldoDevedor.toFixed(2)}</td>
-                    <td>R$ 0,00</td>
-                    <td>R$ ${juros.toFixed(2)}</td>
-                    <td>R$ 0,00</td>
-                    <td>R$ 0,00</td>
-                    <td>R$ 0,00</td>
-                    <td>R$ 0,00</td>
-                </tr>`);
-            }
+    let taxaADM = 25;
+    let seguroDFI = 7.40;
+    let seguroMIPPercentual = 0.0005;
+    let tabela = $('#tabelaSimulacao');
+    tabela.html("");
 
-            let amortizacao = saldoDevedor / (prazo - carencia);
-            for (let mes = carencia + 1; mes <= prazo; mes++) {
-                let juros = saldoDevedor * taxaJuros;
-                let seguroMIP = saldoDevedor * seguroMIPPercentual;
-                let parcela = amortizacao + juros + taxaADM + seguroDFI + seguroMIP;
-                saldoDevedor -= amortizacao;
+    tabela.append(`<tr>
+        <td>0</td>
+        <td>R$ ${saldoDevedor.toFixed(2)}</td>
+        <td>R$ 0,00</td>
+        <td>R$ 0,00</td>
+        <td>R$ 0,00</td>
+        <td>R$ 0,00</td>
+        <td>R$ 0,00</td>
+        <td>R$ 0,00</td>
+    </tr>`);
 
-                tabela.append(`<tr>
-                    <td>${mes}</td>
-                    <td>R$ ${saldoDevedor.toFixed(2)}</td>
-                    <td>R$ ${amortizacao.toFixed(2)}</td>
-                    <td>R$ ${juros.toFixed(2)}</td>
-                    <td>R$ ${seguroMIP.toFixed(2)}</td>
-                    <td>R$ ${seguroDFI.toFixed(2)}</td>
-                    <td>R$ ${taxaADM.toFixed(2)}</td>
-                    <td>R$ ${parcela.toFixed(2)} +IPCA</td>
-                </tr>`);
-            }
+    for (let mes = 1; mes <= carencia; mes++) {
+        let juros = saldoDevedor * taxaJuros;
+        saldoDevedor += juros;
 
-            $(".tabela-container").fadeIn();
-        }
+        tabela.append(`<tr>
+            <td>${mes}</td>
+            <td>R$ ${saldoDevedor.toFixed(2)}</td>
+            <td>R$ 0,00</td>
+            <td>R$ ${juros.toFixed(2)}</td>
+            <td>R$ 0,00</td>
+            <td>R$ 0,00</td>
+            <td>R$ 0,00</td>
+            <td>R$ 0,00</td>
+        </tr>`);
+    }
+
+    let amortizacao = saldoDevedor / (prazo - carencia);
+    for (let mes = carencia + 1; mes <= prazo; mes++) {
+        let juros = saldoDevedor * taxaJuros;
+        let seguroMIP = saldoDevedor * seguroMIPPercentual;
+        let parcela = amortizacao + juros + taxaADM + seguroDFI + seguroMIP;
+        saldoDevedor -= amortizacao;
+
+        tabela.append(`<tr>
+            <td>${mes}</td>
+            <td>R$ ${saldoDevedor.toFixed(2)}</td>
+            <td>R$ ${amortizacao.toFixed(2)}</td>
+            <td>R$ ${juros.toFixed(2)}</td>
+            <td>R$ ${seguroMIP.toFixed(2)}</td>
+            <td>R$ ${seguroDFI.toFixed(2)}</td>
+            <td>R$ ${taxaADM.toFixed(2)}</td>
+            <td>R$ ${parcela.toFixed(2)} +IPCA</td>
+        </tr>`);
+    }
+
+    $(".tabela-container").fadeIn();
+}
+
+
     </script>
 
   </body>
 </html>
+
