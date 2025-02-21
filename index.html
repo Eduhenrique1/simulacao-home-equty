@@ -273,6 +273,8 @@
     // Aplica máscara para valores monetários
     $('#valorImovel, #valorCredito').mask("#.##0,00", { reverse: true });
 
+    $('#taxaJuros').mask("0,00", { reverse: true });
+
     $("#valorImovel").on("input", function () {
         let valorImovel = parseFloat($(this).val().replace(/\./g, "").replace(",", ".")) || 0;
         let maxCredito = valorImovel * 0.5; // Calcula o limite de 50%
