@@ -304,7 +304,21 @@
 function gerarPDF() {
             const { jsPDF } = window.jspdf;
             let doc = new jsPDF();
+            let img = new Image();
+            img.src = "logotipo.png"; // Caminho correto da imagem
 
+// Quando a imagem carregar, gerar o PDF
+img.onload = function () {
+  let pageWidth = doc.internal.pageSize.width; // Largura total da página
+    let imgWidth = 50; // Aumentei um pouco mais a largura
+    let imgHeight = 30; // Aumentei um pouco mais a altura
+    let imgX = (pageWidth - imgWidth) / 2; // Centraliza a imagem
+    let imgY = 10; // Ajustei a posição para não ficar muito colada no topo
+
+    doc.addImage(img, 'PNG', imgX, imgY, imgWidth, imgHeight); // Insere a imagem no topo
+
+
+    
             // Capturar os valores calculados da simulação
             let tipoCalculo = $("input[name='tipoCalculo']:checked").val();
             let tipoAmortizacao = $('#tipoAmortizacao').val();
@@ -336,17 +350,17 @@ function gerarPDF() {
                 dataSimulacao: new Date().toLocaleDateString("pt-BR")
             };
 
-            // Adicionando cabeçalho
-            doc.setFontSize(14);
-            doc.setTextColor(255, 255, 255);
-            doc.setFillColor(60, 120, 40);
-            doc.rect(10, 20, 190, 10, "F");
-            doc.text("Simulação de Crédito com Imóvel em Garantia", 30, 27);
+            let headerY = imgY + imgHeight + 5; // Adiciona um espaçamento abaixo da imagem
+    doc.setFontSize(14);
+    doc.setTextColor(255, 255, 255);
+    doc.setFillColor(60, 120, 40);
+    doc.rect(10, headerY, 190, 10, "F"); // Ajusta a posição do cabeçalho
+    doc.text("Simulação de Crédito com Imóvel em Garantia", 30, headerY + 7); // Ajusta a posição do texto dentro do cabeçalho
 
-            doc.setTextColor(0, 0, 0);
-            doc.setFontSize(10);
-            let margemEsquerda = 20;
-            let y = 40;
+    doc.setTextColor(0, 0, 0);
+    doc.setFontSize(10);
+    let margemEsquerda = 20;
+    let y = headerY + 20; // Move o conteúdo mais para baixo
 
             if(tipoCalculo === 'liquido'){
             doc.text(`Valor Líquido do Crédito: ${dadosSimulacao.valorCredito}`, margemEsquerda, y);
@@ -433,20 +447,78 @@ function gerarPDF() {
                 ]);
             }
 
-            // Criando a tabela no PDF
             doc.autoTable({
-                startY: y,
-                head: [colunas],
-                body: dadosTabela,
-                theme: "grid",
-                styles: { fontSize: 8 },
-                headStyles: { fillColor: [60, 120, 40] }
-            });
+    startY: y,
+    head: [colunas],
+    body: dadosTabela,
+    theme: "grid",
+    styles: { fontSize: 8 },
+    headStyles: { fillColor: [60, 120, 40] },
+    margin: { bottom: 30 }, // Evita sobreposição com o rodapé
+    didDrawPage: function (data) {
+        let pageHeight = doc.internal.pageSize.height;
+        let margemEsquerda = 10;
+        let rodapeY = pageHeight - 30;
+
+        doc.setFont("helvetica", "normal");
+        let observacaoTexto = "Lembramos que isso é ";
+        let simulacaoTexto = "APENAS UMA SIMULAÇÃO, ";
+        let restanteTexto = "a formalização dessa proposta irá depender do laudo do imóvel oferecido como garantia, parecer jurídico de todos os envolvidos no contrato e a capacidade mensal de pagamento. Não existe nenhuma obrigação da Galleria Bank enquanto o contrato de empréstimo com imóvel em garantia não for efetivamente assinado e registrado pelo Cartório de Registro de Imóvel responsável pelo imóvel.";
+
+        rodapeY += 5; // Espaçamento para garantir que fique bem posicionado
+        doc.setFontSize(9);
+        doc.setFont("helvetica", "bold");
+        doc.text("Observação Importante:", margemEsquerda, rodapeY);
+
+        // Criando linha única com texto normal + vermelho + normal novamente
+        doc.setFont("helvetica", "normal");
+        doc.setTextColor(0, 0, 0); // Preto para o texto normal
+        let linhaCompleta = observacaoTexto + simulacaoTexto + restanteTexto;
+        let larguraTexto = 180; // Define a largura máxima
+
+        // Divide a linha completa para evitar quebras ruins
+        let linhasRodape = doc.splitTextToSize(linhaCompleta, larguraTexto);
+        
+        // Define a posição do texto
+        rodapeY += 5;
+        let inicioTexto = margemEsquerda; // Mantém a posição inicial
+
+        // Imprime a linha mantendo "APENAS UMA SIMULAÇÃO" em vermelho
+        linhasRodape.forEach((linha, index) => {
+            let posicaoPalavra = linha.indexOf(simulacaoTexto); // Encontra a palavra destacada
+
+            if (posicaoPalavra !== -1) {
+                let antes = linha.substring(0, posicaoPalavra);
+                let depois = linha.substring(posicaoPalavra + simulacaoTexto.length);
+
+                // Texto antes da palavra vermelha
+                doc.setTextColor(0, 0, 0);
+                doc.text(antes, inicioTexto, rodapeY + (index * 5));
+
+                // Palavra em vermelho
+                let xVermelho = inicioTexto + doc.getTextWidth(antes);
+                doc.setTextColor(200, 0, 0);
+                doc.text(simulacaoTexto, xVermelho, rodapeY + (index * 5));
+
+                // Texto depois da palavra vermelha
+                let xDepois = xVermelho + doc.getTextWidth(simulacaoTexto);
+                doc.setTextColor(0, 0, 0);
+                doc.text(depois, xDepois, rodapeY + (index * 5));
+            } else {
+                // Se não encontrou a palavra, imprime normalmente
+                doc.setTextColor(0, 0, 0);
+                doc.text(linha, inicioTexto, rodapeY + (index * 5));
+            }
+        });
+    }
+});
 
             // Salvando o arquivo
             let nomeArquivo = `Simulacao_${dadosSimulacao.tipoCalculo}_${dadosSimulacao.sistemaAmortizacao}.pdf`;
             doc.save(nomeArquivo);
         }
+      }
+    
     </script>
 
   </body>
