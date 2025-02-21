@@ -426,18 +426,21 @@ doc.text(text, textX, headerY + 7);
                 }
 
                 if (tipoAmortizacao === "SAC") {
-                    amortizacao = saldoAtual / (prazo - mes + 1);
-                    parcela = amortizacao + juros + taxaADM + seguroDFI + seguroMIP;
-                    saldoAtual -= amortizacao;
-                } else { // PRICE
-                  let fator = (taxaJuros * Math.pow(1 + taxaJuros, prazo)) / 
-            (Math.pow(1 + taxaJuros, prazo) - 1);
+    amortizacao = saldoAtual / (prazo - mes + 1);
+    parcela = amortizacao + juros + taxaADM + seguroDFI + seguroMIP;
+    saldoAtual -= amortizacao;
+} else { // PRICE
+    if (mes === carencia + 1) { // Só calcula a parcela fixa uma vez
+        fator = (taxaJuros * Math.pow(1 + taxaJuros, prazo - carencia)) / 
+                (Math.pow(1 + taxaJuros, prazo - carencia) - 1);
+        parcelaFixa = saldoAtual * fator; // Define a parcela fixa
+    }
+    
+    parcela = parcelaFixa + taxaADM + seguroDFI + seguroMIP;
+    amortizacao = parcelaFixa - juros;
+    saldoAtual -= amortizacao;
+}
 
-                    let parcelaFixa = saldoAtual * fator;
-                    parcela = parcelaFixa + taxaADM + seguroDFI + seguroMIP;
-                    amortizacao = parcelaFixa - juros;
-                    saldoAtual -= amortizacao;
-                }
 
                 dadosTabela.push([
                     mes,
