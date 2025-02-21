@@ -127,6 +127,20 @@
     .radio-group input[type="radio"]:checked::before {
         transform: translate(-50%, -50%) scale(1);
     }
+
+.btns{
+  display: flex;
+  justify-content: space-around;
+}
+
+.calc{
+  width: 40%;
+}
+
+.g-pdf{
+  width: 40%;
+}
+
     </style>
   </head>
   <body>
@@ -157,9 +171,13 @@
                 <option value="PRICE">PRICE</option>
             </select>
         </label>
-        <button onclick="calcularSimulacao()">Calcular</button>
+        <div class="btns">
+          <button class="calc" onclick="calcularSimulacao()">Calcular</button>
+          <button class="g-pdf" onclick="gerarPDF()">Baixar PDF</button>
+        </div>
+        
     </div>
-
+    
     <div class="container tabela-container">
       <h3>Tabela de Simulação</h3>
       <table>
@@ -178,7 +196,9 @@
         <tbody id="tabelaSimulacao"></tbody>
       </table>
     </div>
-
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.23/jspdf.plugin.autotable.min.js"></script>
+    
     <script>
         $(document).ready(function () {
             $("#valorImovel").on("input", function () {
@@ -192,16 +212,11 @@
     let tipoCalculo = $("input[name='tipoCalculo']:checked").val();
     let valorImovel = parseFloat($('#valorImovel').val().replace(/\./g, '').replace(',', '.')) || 0;
     let valorCredito = valorImovel * 0.5;
-    let iof = valorCredito * 0.035;  // IOF 3,72%
+    let iof = valorCredito * 0.037215;  // IOF 3,7215%
     let valorBrutoInicial = valorCredito + iof;  // Crédito + IOF
-    let custoEmissao = valorBrutoInicial * 0.05;  // Custo de emissão de 5,264% sobre o valor bruto
+    let custoEmissao = valorBrutoInicial * 0.0526;  // Custo de emissão 5,459%
 
-    let saldoDevedor;
-    if (tipoCalculo === "liquido") {
-        saldoDevedor = valorBrutoInicial + custoEmissao;  // No líquido, os custos são incorporados
-    } else {
-        saldoDevedor = valorCredito;  // No bruto, o valor inicial é apenas o crédito
-    }
+    let saldoDevedor = tipoCalculo === "liquido" ? valorBrutoInicial + custoEmissao : valorCredito;
 
     console.log("Valor do IOF:", iof.toFixed(2));
     console.log("Custo de Emissão:", custoEmissao.toFixed(2));
@@ -213,8 +228,6 @@
     let tipoAmortizacao = $('#tipoAmortizacao').val();
 
     let taxaADM = 25;
-    let seguroDFI = 7.40;
-    let seguroMIPPercentual = 0.0005;
     let tabela = $('#tabelaSimulacao');
     tabela.html("");
 
@@ -237,7 +250,7 @@
             <td>${mes}</td>
             <td>R$ ${saldoDevedor.toFixed(2)}</td>
             <td>R$ 0,00</td>
-            <td>R$ ${juros.toFixed(2)}</td>
+            <td>R$ 0,00</td>
             <td>R$ 0,00</td>
             <td>R$ 0,00</td>
             <td>R$ 0,00</td>
@@ -245,44 +258,195 @@
         </tr>`);
     }
 
+    let seguroDFI = saldoDevedor * 0.0000663;
     let amortizacao;
-if (tipoAmortizacao === "SAC") {
-    amortizacao = saldoDevedor / (prazo - carencia);  // Amortização fixa no SAC
-}
 
-for (let mes = carencia + 1; mes <= prazo; mes++) {
-    let juros = saldoDevedor * taxaJuros;
-    let seguroMIP = saldoDevedor * seguroMIPPercentual;
-
-    let parcela;
-    if (tipoAmortizacao === "SAC") {
-        parcela = amortizacao + juros + taxaADM + seguroDFI + seguroMIP;  // Parcela decrescente
-        saldoDevedor -= amortizacao;
-    } else { // Cálculo para PRICE
+    for (let mes = carencia + 1; mes <= prazo; mes++) { 
+        let juros = saldoDevedor * taxaJuros;
+        let seguroMIP = saldoDevedor * 0.00021;  // Valor corrigido
+        
         let fator = (taxaJuros * Math.pow(1 + taxaJuros, prazo - carencia)) / 
                     (Math.pow(1 + taxaJuros, prazo - carencia) - 1);
-        parcela = saldoDevedor * fator + taxaADM + seguroDFI + seguroMIP;  // Parcela fixa
-        amortizacao = parcela - juros - taxaADM - seguroDFI - seguroMIP;
-        saldoDevedor -= amortizacao;
+
+        let parcela;
+        
+        if (tipoAmortizacao === "SAC") {
+            amortizacao = saldoDevedor / (prazo - mes + 1); 
+            parcela = amortizacao + juros + taxaADM + seguroDFI + seguroMIP;
+            saldoDevedor -= amortizacao;
+        } else { // PRICE
+            let parcelaFixa = saldoDevedor * fator;
+            parcela = parcelaFixa + taxaADM + seguroDFI + seguroMIP;
+            amortizacao = parcelaFixa - juros;
+            saldoDevedor -= amortizacao;
+        }
+
+        // Ajuste no mês seguinte à carência
+        let seguroDFI_corrigido = mes === carencia + 1 ? seguroDFI * (carencia + 1) : seguroDFI;
+        let seguroMIP_corrigido = mes === carencia + 1 ? seguroMIP * (carencia + 1) : seguroMIP;
+        let taxaADM_corrigida = mes === carencia + 1 ? taxaADM * (carencia + 1) : taxaADM;
+
+        tabela.append(`<tr>
+            <td>${mes}</td>
+            <td>R$ ${saldoDevedor.toFixed(2)}</td>
+            <td>R$ ${amortizacao.toFixed(2)}</td>
+            <td>R$ ${juros.toFixed(2)}</td>
+            <td>R$ ${seguroMIP_corrigido.toFixed(2)}</td>
+            <td>R$ ${seguroDFI_corrigido.toFixed(2)}</td>
+            <td>R$ ${taxaADM_corrigida.toFixed(2)}</td>
+            <td>R$ ${parcela.toFixed(2)} +IPCA</td>
+        </tr>`);
     }
-
-    tabela.append(`<tr>
-        <td>${mes}</td>
-        <td>R$ ${saldoDevedor.toFixed(2)}</td>
-        <td>R$ ${amortizacao.toFixed(2)}</td>
-        <td>R$ ${juros.toFixed(2)}</td>
-        <td>R$ ${seguroMIP.toFixed(2)}</td>
-        <td>R$ ${seguroDFI.toFixed(2)}</td>
-        <td>R$ ${taxaADM.toFixed(2)}</td>
-        <td>R$ ${parcela.toFixed(2)} +IPCA</td>
-    </tr>`);
-}
-
 
     $(".tabela-container").fadeIn();
 }
 
+function gerarPDF() {
+            const { jsPDF } = window.jspdf;
+            let doc = new jsPDF();
 
+            // Capturar os valores calculados da simulação
+            let tipoCalculo = $("input[name='tipoCalculo']:checked").val();
+            let tipoAmortizacao = $('#tipoAmortizacao').val();
+            let valorImovel = parseFloat($('#valorImovel').val().replace(/\./g, '').replace(',', '.')) || 0;
+            let valorCredito = valorImovel * 0.5;
+            let iof = valorCredito * 0.037215;
+            let valorBrutoInicial = valorCredito + iof;
+            let custoEmissao = valorBrutoInicial * 0.0526;
+            let saldoDevedor = tipoCalculo === "liquido" ? valorBrutoInicial + custoEmissao : valorCredito;
+            let taxaJuros = parseFloat($('#taxaJuros').val().replace(',', '.')) / 100;
+            let prazo = parseInt($('#prazo').val());
+            let carencia = parseInt($('#carencia').val());
+            // Agora garante que no cálculo "líquido", ele não subtrai IOF e custos, apenas no "bruto"
+            let valorLiquidoCredito = tipoCalculo === "bruto" ? valorCredito - iof - custoEmissao : valorCredito;
+
+
+            // Criar cabeçalho do PDF com os dados corretos
+            let dadosSimulacao = {
+                tipoCalculo: tipoCalculo === "liquido" ? "Líquido" : "Bruto",
+                sistemaAmortizacao: tipoAmortizacao === "SAC" ? "SAC" : "PRICE",
+                valorCredito: `R$ ${valorCredito.toFixed(2)}`,
+                custoEmissao: `R$ ${custoEmissao.toFixed(2)}`,
+                IOF: `R$ ${iof.toFixed(2)}`,
+                valorTotalCredito: `R$ ${saldoDevedor.toFixed(2)}`,
+                taxaJuros: "1,69% a.m. + IPCA",
+                CET: "1,87% a.m. + IPCA",
+                prazo: `${prazo} meses`,
+                carencia: `${carencia} meses`,
+                dataSimulacao: new Date().toLocaleDateString("pt-BR")
+            };
+
+            // Adicionando cabeçalho
+            doc.setFontSize(14);
+            doc.setTextColor(255, 255, 255);
+            doc.setFillColor(60, 120, 40);
+            doc.rect(10, 20, 190, 10, "F");
+            doc.text("Simulação de Crédito com Imóvel em Garantia", 30, 27);
+
+            doc.setTextColor(0, 0, 0);
+            doc.setFontSize(10);
+            let margemEsquerda = 20;
+            let y = 40;
+
+            if(tipoCalculo === 'liquido'){
+            doc.text(`Valor Líquido do Crédito: ${dadosSimulacao.valorCredito}`, margemEsquerda, y);
+            doc.text(`Taxa de Juros: ${dadosSimulacao.taxaJuros}`, 120, y);
+            y += 6;
+            }
+            
+            if (tipoCalculo === "bruto") {
+        doc.text(`Valor Líquido do Crédito: R$ ${valorLiquidoCredito.toFixed(2)}`, margemEsquerda, y);
+        doc.text(`Taxa de Juros: ${dadosSimulacao.taxaJuros}`, 120, y);
+        y += 6;
+    }
+            doc.text(`Custo de Emissão: ${dadosSimulacao.custoEmissao}`, margemEsquerda, y);
+            doc.text(`CET: ${dadosSimulacao.CET}`, 120, y);
+
+            y += 6;
+            doc.text(`IOF: ${dadosSimulacao.IOF}`, margemEsquerda, y);
+            doc.text(`Sistema de Amortização: ${dadosSimulacao.sistemaAmortizacao}`, 120, y);
+
+            y += 6;
+            doc.text(`Valor Total do Crédito: ${dadosSimulacao.valorTotalCredito}`, margemEsquerda, y);
+
+    //         if (tipoCalculo === "bruto") {
+    //     doc.text(`Valor Líquido do Crédito: R$ ${valorLiquidoCredito.toFixed(2)}`, margemEsquerda, y);
+    //     y += 6;
+    // }
+            
+            doc.text(`Data da Simulação: ${dadosSimulacao.dataSimulacao}`, 120, y);
+
+            y += 6;
+            doc.text(`Prazo: ${dadosSimulacao.prazo}`, margemEsquerda, y);
+            doc.text(`Carência: ${dadosSimulacao.carencia}`, 120, y);
+
+            y += 10;
+
+            // Criando os dados da tabela de simulação
+            let colunas = ["#", "Saldo", "Amortização", "Juros", "Seguro MIP", "Seguro DFI", "Taxa ADM", "Valor Parcela"];
+            let dadosTabela = [];
+            
+            let saldoAtual = saldoDevedor;
+            let seguroDFI = saldoAtual * 0.0000663;
+            let taxaADM = 25;
+            let amortizacao;
+
+            for (let mes = 0; mes <= prazo; mes++) {
+                let juros = saldoAtual * taxaJuros;
+                let seguroMIP = saldoAtual * 0.00021;
+                let parcela;
+
+                if (mes === 0) {
+                    dadosTabela.push([mes, `R$ ${saldoAtual.toFixed(2)}`, "R$ 0,00", "R$ 0,00", "R$ 0,00", "R$ 0,00", "R$ 0,00", "R$ 0,00"]);
+                    continue;
+                }
+
+                if (mes <= carencia) {
+                    saldoAtual += juros;
+                    dadosTabela.push([mes, `R$ ${saldoAtual.toFixed(2)}`, "R$ 0,00", `R$ 0,00`, "R$ 0,00", "R$ 0,00", "R$ 0,00", "R$ 0,00"]);
+                    continue;
+                }
+
+                if (tipoAmortizacao === "SAC") {
+                    amortizacao = saldoAtual / (prazo - mes + 1);
+                    parcela = amortizacao + juros + taxaADM + seguroDFI + seguroMIP;
+                    saldoAtual -= amortizacao;
+                } else { // PRICE
+                  let fator = (taxaJuros * Math.pow(1 + taxaJuros, prazo)) / 
+            (Math.pow(1 + taxaJuros, prazo) - 1);
+
+                    let parcelaFixa = saldoAtual * fator;
+                    parcela = parcelaFixa + taxaADM + seguroDFI + seguroMIP;
+                    amortizacao = parcelaFixa - juros;
+                    saldoAtual -= amortizacao;
+                }
+
+                dadosTabela.push([
+                    mes,
+                    `R$ ${saldoAtual.toFixed(2)}`,
+                    `R$ ${amortizacao.toFixed(2)}`,
+                    `R$ ${juros.toFixed(2)}`,
+                    `R$ ${seguroMIP.toFixed(2)}`,
+                    `R$ ${seguroDFI.toFixed(2)}`,
+                    `R$ ${taxaADM.toFixed(2)}`,
+                    `R$ ${parcela.toFixed(2)} +IPCA`
+                ]);
+            }
+
+            // Criando a tabela no PDF
+            doc.autoTable({
+                startY: y,
+                head: [colunas],
+                body: dadosTabela,
+                theme: "grid",
+                styles: { fontSize: 8 },
+                headStyles: { fillColor: [60, 120, 40] }
+            });
+
+            // Salvando o arquivo
+            let nomeArquivo = `Simulacao_${dadosSimulacao.tipoCalculo}_${dadosSimulacao.sistemaAmortizacao}.pdf`;
+            doc.save(nomeArquivo);
+        }
     </script>
 
   </body>
