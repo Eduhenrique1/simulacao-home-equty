@@ -431,7 +431,7 @@ img.onload = function () {
                 custoEmissao: `R$ ${custoEmissao.toFixed(2)}`,
                 IOF: `R$ ${iof.toFixed(2)}`,
                 valorTotalCredito: `R$ ${saldoDevedor.toFixed(2)}`,
-                taxaJuros: "1,69% a.m. + IPCA",
+                taxaJuros: `${(taxaJuros * 100).toFixed(2)}% a.m + IPCA`,
                 CET: "1,87% a.m. + IPCA",
                 prazo: `${prazo} meses`,
                 carencia: `${carencia} meses`,
