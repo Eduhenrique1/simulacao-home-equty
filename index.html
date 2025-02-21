@@ -353,9 +353,13 @@ img.onload = function () {
             let headerY = imgY + imgHeight + 5; // Adiciona um espaçamento abaixo da imagem
     doc.setFontSize(14);
     doc.setTextColor(255, 255, 255);
-    doc.setFillColor(60, 120, 40);
-    doc.rect(10, headerY, 190, 10, "F"); // Ajusta a posição do cabeçalho
-    doc.text("Simulação de Crédito com Imóvel em Garantia", 30, headerY + 7); // Ajusta a posição do texto dentro do cabeçalho
+    doc.setFillColor(255, 204, 0); // Amarelo ouro
+    doc.rect(10, headerY, 190, 10, "F"); // Fundo do cabeçalho
+    let text = "Simulação de Crédito com Imóvel em Garantia";
+let textWidth = doc.getTextWidth(text);
+let textX = (pageWidth - textWidth) / 2; // Centraliza corretamente
+doc.text(text, textX, headerY + 7);
+
 
     doc.setTextColor(0, 0, 0);
     doc.setFontSize(10);
@@ -453,7 +457,7 @@ img.onload = function () {
     body: dadosTabela,
     theme: "grid",
     styles: { fontSize: 8 },
-    headStyles: { fillColor: [60, 120, 40] },
+    headStyles: { fillColor: [255, 204, 0] }, // Amarelo na tabela
     margin: { bottom: 30 }, // Evita sobreposição com o rodapé
     didDrawPage: function (data) {
         let pageHeight = doc.internal.pageSize.height;
