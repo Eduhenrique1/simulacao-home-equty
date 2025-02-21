@@ -260,14 +260,14 @@
 
     let seguroDFI = saldoDevedor * 0.0000663;
     let amortizacao;
+    let fator = (taxaJuros * Math.pow(1 + taxaJuros, prazo - carencia)) / 
+            (Math.pow(1 + taxaJuros, prazo - carencia) - 1);
+let parcelaFixa = saldoDevedor * fator; // Parcela fixa
 
     for (let mes = carencia + 1; mes <= prazo; mes++) { 
         let juros = saldoDevedor * taxaJuros;
         let seguroMIP = saldoDevedor * 0.00021;  // Valor corrigido
-        
-        let fator = (taxaJuros * Math.pow(1 + taxaJuros, prazo - carencia)) / 
-                    (Math.pow(1 + taxaJuros, prazo - carencia) - 1);
-
+       
         let parcela;
         
         if (tipoAmortizacao === "SAC") {
@@ -275,7 +275,7 @@
             parcela = amortizacao + juros + taxaADM + seguroDFI + seguroMIP;
             saldoDevedor -= amortizacao;
         } else { // PRICE
-            let parcelaFixa = saldoDevedor * fator;
+            
             parcela = parcelaFixa + taxaADM + seguroDFI + seguroMIP;
             amortizacao = parcelaFixa - juros;
             saldoDevedor -= amortizacao;
@@ -467,7 +467,7 @@ doc.text(text, textX, headerY + 7);
         doc.setFont("helvetica", "normal");
         let observacaoTexto = "Lembramos que isso é ";
         let simulacaoTexto = "APENAS UMA SIMULAÇÃO, ";
-        let restanteTexto = "a formalização dessa proposta irá depender do laudo do imóvel oferecido como garantia, parecer jurídico de todos os envolvidos no contrato e a capacidade mensal de pagamento. Não existe nenhuma obrigação da Galleria Bank enquanto o contrato de empréstimo com imóvel em garantia não for efetivamente assinado e registrado pelo Cartório de Registro de Imóvel responsável pelo imóvel.";
+        let restanteTexto = "a formalização dessa proposta irá depender do laudo do imóvel oferecido como garantia, parecer jurídico de todos os envolvidos no contrato e a capacidade mensal de pagamento. Não existe nenhuma obrigação da VF Bank enquanto o contrato de empréstimo com imóvel em garantia não for efetivamente assinado e registrado pelo Cartório de Registro de Imóvel responsável pelo imóvel.";
 
         rodapeY += 5; // Espaçamento para garantir que fique bem posicionado
         doc.setFontSize(9);
