@@ -432,7 +432,7 @@ img.onload = function () {
                 IOF: `R$ ${iof.toFixed(2)}`,
                 valorTotalCredito: `R$ ${saldoDevedor.toFixed(2)}`,
                 taxaJuros: `${(taxaJuros * 100).toFixed(2)}% a.m + IPCA`,
-                CET: "1,87% a.m. + IPCA",
+                CET: `${((taxaJuros * 100) + 0.18).toFixed(2)}% a.m + IPCA`,
                 prazo: `${prazo} meses`,
                 carencia: `${carencia} meses`,
                 dataSimulacao: new Date().toLocaleDateString("pt-BR")
